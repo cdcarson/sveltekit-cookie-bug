@@ -1,50 +1,77 @@
 <script>
 	import { browser } from '$app/environment';
+	import { enhance } from '$app/forms';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	const invalidateCacheAndThenNavigate = async () => {
-		await invalidateAll();
-		await goto('/', {})
-	}
+	import { onMount } from 'svelte';
+
+	/** @type {import('./$types').PageData} */
+	export let data;
+	
+	/** @type {Array<{key: string; value: string}>} */
+	let currentDocumentCookies = [];
+	let documetCookieRaw = '';
+	const updateCurrentDocumentCookies = () => {
+		documetCookieRaw = document.cookie;
+		currentDocumentCookies = document.cookie
+			.split(';')
+			.map((s) => s.trim())
+			.filter((s) => s.length > 0)
+			.map((s) => {
+				const kv = s.split('=');
+				return {
+					key: kv[0].trim(),
+					value: decodeURIComponent(kv[1] || '')
+				};
+			});
+	};
+	onMount(() => {
+		updateCurrentDocumentCookies();
+	});
+
 	
 </script>
 
-<h1>Explanation</h1>
+<div style="display: flex;justify-content: space-around;">
+	<div style="width: 45%;">
+		<h4>Server</h4>
+		<pre>{JSON.stringify(data, null, 1)}</pre>
+	</div>
+	<div style="width: 45%;">
+		<h4>Client (not reactive -- click "Update")</h4>
+		<p>
+			<button on:click={updateCurrentDocumentCookies}>Update</button>
+		</p>
+		<pre>{JSON.stringify(currentDocumentCookies, null, 1)}</pre>
+		<h6>Raw document.cookie</h6>
+		<p>
+			{documetCookieRaw}
+		</p>
+		
+	</div>
+</div>
+<hr />
+<div style="display:flex; justify-content: space-between;">
+	<a href="/set">Set Endpoint Cookie</a>
 
-<p>Deleting the cookies and refreshing the page does not set new cookies.</p>
-<p>This is despite the handle and load functions setting new cookies on every page request.</p>
+	<a href="/delete">Delete Endpoint Cookie</a>
 
-<a
-	on:click={() => {
-		document.cookie = 'handle=; Path=/; SameSite=Lax; maxAge:0';
-		document.cookie = 'load=; Path=/; SameSite=Lax; maxAge:0';
-	}}
-	data-sveltekit-reload
-	href="/">Delete cookies and reload the page</a
->
-<button on:click={invalidateCacheAndThenNavigate}>Invalidate cache, then navigate</button>
+	<form action="?/deleteHandleCookie" method="post" use:enhance>
+		<button type="submit">Delete Handle Cookie</button>
+	</form>
 
-<h2>document.cookie:</h2>
-{#if browser}
-<p>{document.cookie ? document.cookie : 'No cookies were set. This is a bug.'}</p>
-{/if}
+	<form action="?/deleteLoadCookie" method="post" use:enhance>
+		<button type="submit">Delete Load Cookie</button>
+	</form>
+
+	<form action="?/setActionCookie" method="post" use:enhance>
+		<button type="submit">Set Action Cookie</button>
+	</form>
+
+	<form action="?/deleteActionCookie" method="post" use:enhance>
+		<button type="submit">Delete Action Cookie</button>
+	</form>
+</div>
 
 
-<h2>However...</h2>
-<h3>Invalidation</h3>
-<p>The cookies are successfully set after the page is invalidated.</p>
-<a on:click={() => invalidate($page.url.href)} data-sveltekit-reload href="/"
-	>Invalidate and reload the page</a
->
 
-<h3>Empty cache</h3>
-<p>The cookies are also set if the browser cache is emptied and the page is reloaded.</p>
-
-<h2>Additionally...</h2>
-<p>Building the app and running it with `npm run preview` has different bugs.</p>
-<p>The `load` cookie does not get set after invalidating.</p>
-<p>
-	The `handle` cookie is inconsistently set after a random number of reloads. However, it still gets
-	set after invalidation.
-</p>
-<p>The preview server is also outputting the error `Error: Not found: /service-worker.js`</p>
