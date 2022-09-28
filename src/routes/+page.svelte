@@ -1,13 +1,12 @@
 <script>
-	import { invalidate } from '$app/navigation';
+	import { browser } from '$app/environment';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
-
-	let cookies;
-
-	onMount(() => {
-		cookies = document.cookie;
-	});
+	const invalidateCacheAndThenNavigate = async () => {
+		await invalidateAll();
+		await goto('/', {})
+	}
+	
 </script>
 
 <h1>Explanation</h1>
@@ -17,15 +16,19 @@
 
 <a
 	on:click={() => {
-		document.cookie = 'handle=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-		document.cookie = 'load=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+		document.cookie = 'handle=; Path=/; SameSite=Lax; maxAge:0';
+		document.cookie = 'load=; Path=/; SameSite=Lax; maxAge:0';
 	}}
 	data-sveltekit-reload
 	href="/">Delete cookies and reload the page</a
 >
+<button on:click={invalidateCacheAndThenNavigate}>Invalidate cache, then navigate</button>
 
 <h2>document.cookie:</h2>
-<p>{cookies ? JSON.stringify(cookies) : 'No cookies were set. This is a bug.'}</p>
+{#if browser}
+<p>{document.cookie ? document.cookie : 'No cookies were set. This is a bug.'}</p>
+{/if}
+
 
 <h2>However...</h2>
 <h3>Invalidation</h3>
